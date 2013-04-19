@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Home Center</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, maximum-scale=1">
+
+        <!-- Favicon for bookmark -->
+        <link rel="shortcut icon" href="favicon.ico"  type="image/x-icon" />
+        <link rel="Bookmark" href="favicon.ico" />
+        <!-- Add to home screen icon for iOS -->
+        <link rel="apple-touch-icon" href="favicon.png" />
+        
+        <!--[if lt IE 9]> 
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+
+        <link rel="stylesheet" type="text/css" href="styles/checkbox.css">
+        <style type="text/css">
+            html,body
+            {
+                margin: 0;
+                padding: 0;
+                background-color: #fff;
+
+                font: 62.5%/1 "Lucida Sans Unicode","Lucida Grande",Verdana,Arial,Helvetica,sans-serif;
+                background-color: hsl(200,5%,15%);
+                background-size: 5px 5px;
+                background-image: -webkit-linear-gradient( 45deg, hsla(0,0%,0%,0) 0px, hsla(0,0%,0%,.10) 50%, hsla(0,0%,0%,0) 100% );
+            }
+            .wrapper
+            {
+                max-width: 480px;
+                width: 100%;
+                margin: 0 auto;
+            }
+            h1
+            {
+                color: rgb(168, 132, 18);
+                text-align: center;
+                margin-top: 80px;
+                font-size: 3em;
+                text-shadow: 0 1px 3px #000;
+            }
+            .lightcontrol
+            {
+                text-align: center;
+                margin-top: 50px;
+            }
+            input[type="checkbox"]
+            {
+            }
+            .lightstatus
+            {
+                width: 150px;
+                height: 150px;
+                display: block;
+                margin: 30px auto;
+                background: url(images/light_off.png) center center no-repeat;
+            }
+            .lightstatus.active
+            {
+                background-image: url(images/light_on.png);
+            }
+            iframe
+            {
+                width: 0;
+                height: 0;
+                border: none;
+            }
+        </style>
+
+    </head>
+    <body>
+        <div class="wrapper">
+            <h1>
+                Home Center
+            </h1>
+            <div class="lightstatus" data-action="lightstatus"></div>
+            <div class="lightcontrol" data-action="lightcontrol">
+                <input type="checkbox" data-action="lightswitch" data-icon2="ON&nbsp;&nbsp;&nbsp;" data-icon1="&nbsp;&nbsp;&nbsp;OFF">
+            </div>
+            <iframe data-action="lightaccess" src=""></iframe>
+        </div>
+
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script type="text/javascript">
+
+            function init(ip){
+                var host = "http://" + ip;
+                var $btnContainer = $("[data-action='lightcontrol']");
+                var $lightaccess = $("[data-action='lightaccess']");
+
+                var lightStatus = 0;
+                var pollCount = 0;
+
+                function lightOn(){
+                    // Set light physically
+                    $lightaccess.attr("src", host + "?q=1");
+                };
+                function lightOff(){
+                    // Set light physically
+                    $lightaccess.attr("src", host + "?q=0");
+                };
+                function lightStatusOn(){
+                    // Reset data status
+                    lightStatus = 1;
+                    // Reset UI
+                    $("[data-action='lightswitch']").get(0).checked = true;
+                    $("[data-action='lightstatus']").addClass("active");
+                }
+                function lightStatusOff(){
+                    // Reset data status
+                    lightStatus = 0;
+                    // Reset UI
+                    $("[data-action='lightswitch']").get(0).checked = false;
+                    $("[data-action='lightstatus']").removeClass("active");
+                }
+
+                function getStatus(){
+                    // GET Status
+                    $.ajax({
+                        url: "/getstatus",
+                        cache: false,
+                        dataType: "html"
+                    }).done(function(data){
+                        if(pollCount > 20){
+                            pollCount = 0;
+                            return;
+                        }
+                        var status = parseInt(data);
+                        console.log("Client status:"+ lightStatus);
+                        console.log("AR status:" + status);
+                        if(!data || lightStatus == status){
+                            pollCount++;
+                            setTimeout(getStatus, 400);
+                            return;
+                        }
+                        console.log("change status");
+                        // Set default status of light
+                        status ? lightStatusOn() : lightStatusOff();
+                    });
+                };
+                // Events
+                $btnContainer.on("change", "[data-action='lightswitch']", function(e){
+                    e.preventDefault();
+                    if(this.checked){
+                        lightOn();
+                    }
+                    else
+                    {
+                        lightOff();
+                    }
+                    // Get response
+                    getStatus();
+                });
+                // Status initialize
+                getStatus();
+            };
+
+            // Init
+            // Get IP
+            $.ajax({
+                url: "/getip",
+                cache: false,
+                dataType: "html"
+            }).done(function(data) {
+                init(data);
+            });
+
+        </script>
+    
+    </body>
+</html>
